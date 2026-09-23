@@ -1,0 +1,30 @@
+query CartLinesDiscountsGenerateRun {
+  discount {
+    discountClasses
+  }
+  cart {
+    lines {
+      id
+      quantity
+      cost {
+        amountPerQuantity {
+          amount
+        }
+      }
+      merchandise {
+        __typename
+        ... on ProductVariant {
+          product {
+            id
+            tiersMetafield: metafield(
+              namespace: "gw_tier_discount"
+              key: "tiers"
+            ) {
+              value
+            }
+          }
+        }
+      }
+    }
+  }
+}

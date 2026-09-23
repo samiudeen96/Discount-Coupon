@@ -1,0 +1,124 @@
+.gw-tier-picker {
+  display: block;
+  max-width: 480px;
+}
+
+.gw-tier-picker__heading {
+  margin: 0 0 12px;
+  padding: 10px 16px;
+  background: var(--gw-accent);
+  color: #fff;
+  font-weight: 600;
+  text-align: center;
+  border-radius: 8px;
+}
+
+.gw-tier-picker__list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.gw-tier-picker__option {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  border: 1px solid #e1e1e1;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background-color 0.15s ease;
+  background: #fff;
+}
+
+.gw-tier-picker__option:hover {
+  border-color: var(--gw-accent);
+}
+
+.gw-tier-picker__option.is-selected {
+  border-color: var(--gw-accent);
+  border-width: 2px;
+  padding: 13px 15px;
+  background: var(--gw-accent-bg);
+}
+
+.gw-tier-picker__option input[type="radio"] {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.gw-tier-picker__radio {
+  flex: 0 0 auto;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: 2px solid #c4c4c4;
+  position: relative;
+}
+
+.gw-tier-picker__option.is-selected .gw-tier-picker__radio {
+  border-color: var(--gw-accent);
+}
+
+.gw-tier-picker__option.is-selected .gw-tier-picker__radio::after {
+  content: "";
+  position: absolute;
+  inset: 3px;
+  border-radius: 50%;
+  background: var(--gw-accent);
+}
+
+.gw-tier-picker__label {
+  font-size: 15px;
+  color: #1a1a1a;
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.gw-tier-picker__label strong {
+  font-size: 16px;
+}
+
+.gw-tier-picker__compare {
+  color: #8a8a8a;
+  font-size: 13px;
+}
+
+.gw-tier-picker__tag {
+  order: -1;
+  flex-basis: 100%;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--gw-accent);
+}
+
+.gw-tier-picker__submit {
+  margin-top: 14px;
+  width: 100%;
+  padding: 14px;
+  border: none;
+  border-radius: 8px;
+  background: var(--gw-accent);
+  color: #fff;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.gw-tier-picker__submit:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.gw-tier-picker__status {
+  margin: 8px 0 0;
+  font-size: 13px;
+  color: #6a6a6a;
+  min-height: 1em;
+}

@@ -1,0 +1,73 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// Note that some adapters may set a maximum length for the String type by default, please ensure your strings are long
+// enough when changing adapters.
+// See https://www.prisma.io/docs/orm/reference/prisma-schema-reference#string for more information
+datasource db {
+  provider = "sqlite"
+  url      = "file:dev.sqlite"
+}
+
+model Session {
+  id                  String    @id
+  shop                String
+  state               String
+  isOnline            Boolean   @default(false)
+  scope               String?
+  expires             DateTime?
+  accessToken         String
+  userId              BigInt?
+  firstName           String?
+  lastName            String?
+  email               String?
+  accountOwner        Boolean   @default(false)
+  locale              String?
+  collaborator        Boolean?  @default(false)
+  emailVerified       Boolean?  @default(false)
+  refreshToken        String?
+  refreshTokenExpires DateTime?
+}
+
+model TierDiscount {
+  id          String   @id @default(cuid())
+  shop        String
+  productId   String
+  productGid  String
+  title       String
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  tiers       Tier[]
+
+  @@unique([shop, productGid])
+}
+
+// A merchant-chosen subset of the shop's active discount codes, picked on the
+// Coupons admin page, to show in the storefront coupon slider.
+model SelectedCoupon {
+  id        String   @id @default(cuid())
+  shop      String
+  code      String
+  title     String
+  summary   String?
+  position  Int      @default(0)
+  createdAt DateTime @default(now())
+
+  @@unique([shop, code])
+}
+
+model Tier {
+  id             String       @id @default(cuid())
+  tierDiscountId String
+  tierDiscount   TierDiscount @relation(fields: [tierDiscountId], references: [id], onDelete: Cascade)
+  quantity       Int
+  discountType   String       @default("FIXED") // "FIXED" (bundle price) | "PERCENTAGE" (percent off)
+  price          Float
+  label          String?
+  position       Int          @default(0)
+}

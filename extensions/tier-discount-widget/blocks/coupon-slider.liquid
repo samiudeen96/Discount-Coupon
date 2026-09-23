@@ -1,0 +1,84 @@
+{% doc %}
+  Coupon code carousel ("Slide through active discount codes, tap to copy").
+  Reads active codes from the shop.metafields.gw_tier_discount.coupon_codes
+  metafield, which is kept in sync by the GW Bulk Tier Discount admin app
+  (see syncActiveCouponCodes in app/models/tierDiscount.server.ts) every time
+  the merchant opens the Tier Discounts list.
+{% enddoc %}
+
+{% liquid
+  assign coupons_json = shop.metafields.gw_tier_discount.coupon_codes.value
+  if coupons_json == blank
+    assign coupons = empty
+  else
+    assign coupons = coupons_json
+  endif
+%}
+
+{% if coupons != empty %}
+  <coupon-slider
+    class="gw-coupon-slider"
+    data-block-id="{{ block.id }}"
+    style="
+      --gw-accent: {{ block.settings.accent_color }};
+      --gw-accent-bg: {{ block.settings.accent_color }}14;
+    "
+    {{ block.shopify_attributes }}
+  >
+    {% if block.settings.heading != blank %}
+      <p class="gw-coupon-slider__heading">{{ block.settings.heading }}</p>
+    {% endif %}
+
+    <div class="gw-coupon-slider__viewport">
+      <div class="gw-coupon-slider__track">
+        {% for coupon in coupons %}
+          <div class="gw-coupon-slider__card">
+            <div class="gw-coupon-slider__info">
+              <span class="gw-coupon-slider__title">{{ coupon.title }}</span>
+              {% if coupon.summary != blank %}
+                <span class="gw-coupon-slider__summary">{{ coupon.summary }}</span>
+              {% endif %}
+            </div>
+            <button
+              type="button"
+              class="gw-coupon-slider__copy"
+              data-copy-code="{{ coupon.code }}"
+            >
+              <span class="gw-coupon-slider__code">{{ coupon.code }}</span>
+              <span class="gw-coupon-slider__copy-label" data-copy-label>Copy</span>
+            </button>
+          </div>
+        {% endfor %}
+      </div>
+    </div>
+
+    <div class="gw-coupon-slider__controls">
+      <button type="button" class="gw-coupon-slider__arrow" data-prev aria-label="Previous coupon">‹</button>
+      <div class="gw-coupon-slider__dots" data-dots></div>
+      <button type="button" class="gw-coupon-slider__arrow" data-next aria-label="Next coupon">›</button>
+    </div>
+  </coupon-slider>
+  <link rel="stylesheet" href="{{ 'coupon-slider.css' | asset_url }}">
+  <script src="{{ 'coupon-slider.js' | asset_url }}" defer></script>
+{% endif %}
+
+{% schema %}
+{
+  "name": "Coupon code slider",
+  "target": "section",
+  "settings": [
+    {
+      "type": "text",
+      "id": "heading",
+      "label": "Heading",
+      "default": "Available Coupons"
+    },
+    {
+      "type": "color",
+      "id": "accent_color",
+      "label": "Accent color",
+      "default": "#7b3fa0"
+    }
+  ]
+}
+{% endschema %}

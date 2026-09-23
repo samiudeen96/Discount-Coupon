@@ -1,0 +1,122 @@
+{% doc %}
+  Quantity-tier price picker ("Buy 2 for $49.99 / Buy 3 for $69.99 / ...").
+  Reads tiers from the gw_tier_discount.tiers product metafield, which is
+  written by the GW Bulk Tier Discount admin app. Selecting a tier sets the
+  quantity used by this block's own add-to-cart button.
+{% enddoc %}
+
+{% liquid
+  assign tiers_json = product.metafields.gw_tier_discount.tiers.value
+  if tiers_json == blank
+    assign tiers = empty
+  else
+    assign tiers = tiers_json
+  endif
+%}
+
+{% if tiers != empty %}
+  {% assign variant = product.selected_or_first_available_variant %}
+  {% assign unit_price = variant.price | default: 0 %}
+
+  <tier-picker
+    class="gw-tier-picker"
+    data-block-id="{{ block.id }}"
+    data-variant-id="{{ variant.id }}"
+    data-unit-price="{{ unit_price }}"
+    data-currency="{{ cart.currency.iso_code }}"
+    style="
+      --gw-accent: {{ block.settings.accent_color }};
+      --gw-accent-bg: {{ block.settings.accent_color }}14;
+    "
+    {{ block.shopify_attributes }}
+  >
+    {% if block.settings.heading != blank %}
+      <p class="gw-tier-picker__heading">{{ block.settings.heading }}</p>
+    {% endif %}
+
+    <div class="gw-tier-picker__list" role="radiogroup" aria-label="{{ block.settings.heading | default: 'Choose a quantity' }}">
+      {% for tier in tiers %}
+        {% liquid
+          assign qty = tier.quantity
+          assign is_percentage = false
+          if tier.discountType == "PERCENTAGE"
+            assign is_percentage = true
+          endif
+          assign compare_total_cents = unit_price | times: qty
+          assign compare_total = compare_total_cents | divided_by: 100.0
+
+          if is_percentage
+            assign bundle_price_cents = compare_total_cents | times: tier.price | divided_by: 100
+          else
+            assign bundle_price = tier.price
+            assign bundle_price_cents = bundle_price | times: 100 | round
+          endif
+
+          assign is_selected = false
+          if forloop.first
+            assign is_selected = true
+          endif
+        %}
+        <label class="gw-tier-picker__option{% if is_selected %} is-selected{% endif %}">
+          <input
+            type="radio"
+            name="gw-tier-{{ block.id }}"
+            value="{{ qty }}"
+            data-price="{{ bundle_price_cents }}"
+            {% if is_selected %}checked{% endif %}
+          >
+          <span class="gw-tier-picker__radio" aria-hidden="true"></span>
+          <span class="gw-tier-picker__label">
+            {% if tier.label != blank %}
+              <span class="gw-tier-picker__tag">{{ tier.label }}</span>
+            {% endif %}
+            {% if is_percentage %}
+              Buy {{ qty }} and save {{ tier.price }}%
+              <strong>{{ bundle_price_cents | money }}</strong>
+            {% else %}
+              Buy {{ qty }} for
+              <strong>{{ bundle_price_cents | money }}</strong>
+            {% endif %}
+            {% if compare_total_cents > bundle_price_cents %}
+              <s class="gw-tier-picker__compare">{{ compare_total_cents | money }}</s>
+            {% endif %}
+          </span>
+        </label>
+      {% endfor %}
+    </div>
+
+    <button type="button" class="gw-tier-picker__submit" data-add-to-cart>
+      {{ block.settings.button_label | default: "Add to cart" }}
+    </button>
+    <p class="gw-tier-picker__status" data-status role="status" aria-live="polite"></p>
+  </tier-picker>
+  <link rel="stylesheet" href="{{ 'tier-picker.css' | asset_url }}">
+  <script src="{{ 'tier-picker.js' | asset_url }}" defer></script>
+{% endif %}
+
+{% schema %}
+{
+  "name": "Tier price picker",
+  "target": "section",
+  "settings": [
+    {
+      "type": "text",
+      "id": "heading",
+      "label": "Heading",
+      "default": "Buy More, Save More!"
+    },
+    {
+      "type": "text",
+      "id": "button_label",
+      "label": "Button label",
+      "default": "Add to cart"
+    },
+    {
+      "type": "color",
+      "id": "accent_color",
+      "label": "Accent color",
+      "default": "#7b3fa0"
+    }
+  ]
+}
+{% endschema %}

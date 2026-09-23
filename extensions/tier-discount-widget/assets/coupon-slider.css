@@ -1,0 +1,127 @@
+.gw-coupon-slider {
+  display: block;
+  max-width: 480px;
+}
+
+.gw-coupon-slider__heading {
+  margin: 0 0 12px;
+  padding: 10px 16px;
+  background: var(--gw-accent);
+  color: #fff;
+  font-weight: 600;
+  text-align: center;
+  border-radius: 8px;
+}
+
+.gw-coupon-slider__viewport {
+  overflow: hidden;
+  width: 100%;
+}
+
+.gw-coupon-slider__track {
+  display: flex;
+  gap: 12px;
+  transition: transform 0.25s ease;
+}
+
+.gw-coupon-slider__card {
+  flex: 0 0 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 16px;
+  border: 1px dashed var(--gw-accent);
+  border-radius: 10px;
+  background: var(--gw-accent-bg);
+}
+
+.gw-coupon-slider__info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.gw-coupon-slider__title {
+  font-size: 15px;
+  font-weight: 600;
+  color: #1a1a1a;
+}
+
+.gw-coupon-slider__summary {
+  font-size: 13px;
+  color: #6a6a6a;
+}
+
+.gw-coupon-slider__copy {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 14px;
+  border: 1px solid var(--gw-accent);
+  border-radius: 8px;
+  background: #fff;
+  cursor: pointer;
+}
+
+.gw-coupon-slider__code {
+  font-family: monospace;
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: #1a1a1a;
+}
+
+.gw-coupon-slider__copy-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--gw-accent);
+}
+
+.gw-coupon-slider__copy.is-copied .gw-coupon-slider__copy-label {
+  color: #1a7f37;
+}
+
+.gw-coupon-slider__controls {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.gw-coupon-slider__arrow {
+  width: 32px;
+  height: 32px;
+  border: 1px solid #e1e1e1;
+  border-radius: 50%;
+  background: #fff;
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+  color: #1a1a1a;
+}
+
+.gw-coupon-slider__arrow:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.gw-coupon-slider__dots {
+  display: flex;
+  gap: 6px;
+}
+
+.gw-coupon-slider__dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #d4d4d4;
+  padding: 0;
+  border: none;
+  cursor: pointer;
+}
+
+.gw-coupon-slider__dot.is-active {
+  background: var(--gw-accent);
+}
