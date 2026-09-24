@@ -13,7 +13,7 @@ import {
   Badge,
   Modal,
 } from "@shopify/polaris";
-import { TitleBar } from "@shopify/app-bridge-react";
+import { TitleBar, useAppBridge } from "@shopify/app-bridge-react";
 import { authenticate } from "../shopify.server";
 import db from "../db.server";
 import TierRowsEditor, { type TierRow } from "../components/TierRowsEditor";
@@ -21,10 +21,11 @@ import {
   clearTierMetafield,
   ensureTierDiscountIsActive,
   syncTierMetafield,
+  validateTiers,
 } from "../models/tierDiscount.server";
 
 export const loader = async ({ request, params }: LoaderFunctionArgs) => {
-  const { session } = await authenticate.admin(request);
+  const { admin, session } = await authenticate.admin(request);
 
   const tierDiscount = await db.tierDiscount.findFirst({
     where: { id: params.id, shop: session.shop },
@@ -35,7 +36,32 @@ export const loader = async ({ request, params }: LoaderFunctionArgs) => {
     throw new Response("Not found", { status: 404 });
   }
 
-  return { tierDiscount };
+  // Best-effort: only used for the live savings preview in the editor.
+  let unitPrice: number | null = null;
+  let currencyCode: string | null = null;
+  try {
+    const response = await admin.graphql(
+      `#graphql
+        query TierDiscountProductPrice($id: ID!) {
+          shop { currencyCode }
+          product(id: $id) {
+            variants(first: 1) {
+              nodes { price }
+            }
+          }
+        }`,
+      { variables: { id: tierDiscount.productGid } },
+    );
+    const json = await response.json();
+    const price = json?.data?.product?.variants?.nodes?.[0]?.price;
+    unitPrice = price ? Number(price) : null;
+    currencyCode = json?.data?.shop?.currencyCode ?? null;
+  } catch {
+    unitPrice = null;
+    currencyCode = null;
+  }
+
+  return { tierDiscount, unitPrice, currencyCode };
 };
 
 export const action = async ({ request, params }: ActionFunctionArgs) => {
@@ -82,6 +108,69 @@ export const action = async ({ request, params }: ActionFunctionArgs) => {
     return { ok: true, isActive: nextActive };
   }
 
+  if (intent === "duplicate") {
+    const targets = JSON.parse(
+      String(formData.get("targets") || "[]"),
+    ) as { id: string; title: string }[];
+
+    for (const target of targets) {
+      if (target.id === tierDiscount.productGid) continue;
+      const targetProductId = target.id.split("/").pop() || "";
+
+      await db.tierDiscount.upsert({
+        where: {
+          shop_productGid: { shop: session.shop, productGid: target.id },
+        },
+        update: {
+          title: target.title,
+          isActive: true,
+          tiers: {
+            deleteMany: {},
+            create: tierDiscount.tiers.map((t, i) => ({
+              quantity: t.quantity,
+              discountType: t.discountType,
+              price: t.price,
+              label: t.label,
+              position: i,
+            })),
+          },
+        },
+        create: {
+          shop: session.shop,
+          productGid: target.id,
+          productId: targetProductId,
+          title: target.title,
+          tiers: {
+            create: tierDiscount.tiers.map((t, i) => ({
+              quantity: t.quantity,
+              discountType: t.discountType,
+              price: t.price,
+              label: t.label,
+              position: i,
+            })),
+          },
+        },
+      });
+
+      await syncTierMetafield(
+        admin,
+        target.id,
+        tierDiscount.tiers.map((t) => ({
+          quantity: t.quantity,
+          discountType: t.discountType as "FIXED" | "PERCENTAGE",
+          price: t.price,
+          label: t.label,
+        })),
+      );
+    }
+
+    if (targets.length > 0) {
+      await ensureTierDiscountIsActive(admin);
+    }
+
+    return { ok: true, duplicated: targets.length };
+  }
+
   const tiers = JSON.parse(String(formData.get("tiers") || "[]")) as {
     quantity: number;
     discountType: "FIXED" | "PERCENTAGE";
@@ -89,8 +178,9 @@ export const action = async ({ request, params }: ActionFunctionArgs) => {
     label: string | null;
   }[];
 
-  if (tiers.length === 0) {
-    return { error: "Add at least one tier." };
+  const validationError = validateTiers(tiers);
+  if (validationError) {
+    return { error: validationError };
   }
 
   await db.tier.deleteMany({ where: { tierDiscountId: tierDiscount.id } });
@@ -116,8 +206,9 @@ export const action = async ({ request, params }: ActionFunctionArgs) => {
 };
 
 export default function EditTierDiscount() {
-  const { tierDiscount } = useLoaderData<typeof loader>();
+  const { tierDiscount, unitPrice, currencyCode } = useLoaderData<typeof loader>();
   const navigate = useNavigate();
+  const shopify = useAppBridge();
   const fetcher = useFetcher<typeof action>();
 
   const [rows, setRows] = useState<TierRow[]>(
@@ -156,6 +247,20 @@ export default function EditTierDiscount() {
     fetcher.submit({ intent: "toggle" }, { method: "post" });
   };
 
+  const handleDuplicate = async () => {
+    const selection = await shopify.resourcePicker({
+      type: "product",
+      multiple: true,
+    });
+    if (!selection || selection.length === 0) return;
+
+    const targets = selection.map((p) => ({ id: p.id, title: p.title }));
+    fetcher.submit(
+      { intent: "duplicate", targets: JSON.stringify(targets) },
+      { method: "post" },
+    );
+  };
+
   const isActive =
     fetcher.data && "isActive" in fetcher.data
       ? fetcher.data.isActive
@@ -172,8 +277,17 @@ export default function EditTierDiscount() {
         {fetcher.data && "error" in fetcher.data && (
           <Banner tone="critical">{fetcher.data.error}</Banner>
         )}
-        {fetcher.data && "ok" in fetcher.data && !("isActive" in fetcher.data) && (
-          <Banner tone="success">Saved.</Banner>
+        {fetcher.data &&
+          "ok" in fetcher.data &&
+          !("isActive" in fetcher.data) &&
+          !("duplicated" in fetcher.data) && (
+            <Banner tone="success">Saved.</Banner>
+          )}
+        {fetcher.data && "duplicated" in fetcher.data && (
+          <Banner tone="success">
+            Copied these tiers to {fetcher.data.duplicated}{" "}
+            {fetcher.data.duplicated === 1 ? "product" : "products"}.
+          </Banner>
         )}
         <Card>
           <BlockStack gap="300">
@@ -206,7 +320,12 @@ export default function EditTierDiscount() {
             <Text as="h2" variant="headingMd">
               Quantity tiers
             </Text>
-            <TierRowsEditor rows={rows} onChange={setRows} />
+            <TierRowsEditor
+              rows={rows}
+              onChange={setRows}
+              unitPrice={unitPrice}
+              currencyCode={currencyCode}
+            />
           </BlockStack>
         </Card>
 
@@ -219,6 +338,7 @@ export default function EditTierDiscount() {
           >
             Save changes
           </Button>
+          <Button onClick={handleDuplicate}>Duplicate to other products</Button>
           <Button tone="critical" onClick={() => setDeleteModalOpen(true)}>
             Delete tier discount
           </Button>

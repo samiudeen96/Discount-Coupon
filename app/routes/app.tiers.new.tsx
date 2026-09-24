@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { ActionFunctionArgs } from "@remix-run/node";
 import { redirect } from "@remix-run/node";
 import { useFetcher, useNavigate } from "@remix-run/react";
@@ -22,6 +22,7 @@ import TierRowsEditor, {
 import {
   ensureTierDiscountIsActive,
   syncTierMetafield,
+  validateTiers,
 } from "../models/tierDiscount.server";
 
 export const action = async ({ request }: ActionFunctionArgs) => {
@@ -38,8 +39,13 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     label: string | null;
   }[];
 
-  if (!productGid || tiers.length === 0) {
-    return { error: "Pick a product and at least one tier." };
+  if (!productGid) {
+    return { error: "Pick a product." };
+  }
+
+  const validationError = validateTiers(tiers);
+  if (validationError) {
+    return { error: validationError };
   }
 
   const tierDiscount = await db.tierDiscount.upsert({
@@ -95,6 +101,10 @@ export default function NewTierDiscount() {
     emptyTierRow("tier-1"),
     emptyTierRow("tier-2"),
   ]);
+  const priceFetcher = useFetcher<{
+    unitPrice: number | null;
+    currencyCode: string | null;
+  }>();
 
   const pickProduct = async () => {
     const selection = await shopify.resourcePicker({
@@ -110,6 +120,17 @@ export default function NewTierDiscount() {
       });
     }
   };
+
+  useEffect(() => {
+    if (!product) return;
+    priceFetcher.load(
+      `/app/tiers/product-price?productId=${encodeURIComponent(product.id)}`,
+    );
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [product?.id]);
+
+  const unitPrice = priceFetcher.data?.unitPrice ?? null;
+  const currencyCode = priceFetcher.data?.currencyCode ?? null;
 
   const canSave =
     product &&
@@ -173,7 +194,12 @@ export default function NewTierDiscount() {
             <Text as="h2" variant="headingMd">
               Quantity tiers
             </Text>
-            <TierRowsEditor rows={rows} onChange={setRows} />
+            <TierRowsEditor
+              rows={rows}
+              onChange={setRows}
+              unitPrice={unitPrice}
+              currencyCode={currencyCode}
+            />
           </BlockStack>
         </Card>
 

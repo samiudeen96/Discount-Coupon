@@ -1,5 +1,6 @@
 import { BlockStack, Button, InlineStack, TextField, Select, Text, Icon } from "@shopify/polaris";
 import { DeleteIcon } from "@shopify/polaris-icons";
+import { formatMoney, currencySymbol } from "../utils/money";
 
 export type DiscountType = "FIXED" | "PERCENTAGE";
 
@@ -20,12 +21,38 @@ const DISCOUNT_TYPE_OPTIONS = [
   { label: "Percentage off", value: "PERCENTAGE" },
 ];
 
+function tierPreview(
+  row: TierRow,
+  unitPrice: number | null,
+  currencyCode: string | null,
+): string | null {
+  const quantity = Number(row.quantity);
+  const price = Number(row.price);
+  if (!quantity || !price) return null;
+
+  if (row.discountType === "PERCENTAGE") {
+    if (!unitPrice) return `${price}% off`;
+    const total = unitPrice * quantity * (1 - price / 100);
+    return `= ${formatMoney(total, currencyCode)} total (${price}% off)`;
+  }
+
+  const perUnit = price / quantity;
+  if (!unitPrice) return `= ${formatMoney(perUnit, currencyCode)}/unit`;
+  const regularTotal = unitPrice * quantity;
+  const percentOff = regularTotal > 0 ? ((regularTotal - price) / regularTotal) * 100 : 0;
+  return `= ${formatMoney(perUnit, currencyCode)}/unit (${percentOff.toFixed(0)}% off)`;
+}
+
 export default function TierRowsEditor({
   rows,
   onChange,
+  unitPrice = null,
+  currencyCode = null,
 }: {
   rows: TierRow[];
   onChange: (rows: TierRow[]) => void;
+  unitPrice?: number | null;
+  currencyCode?: string | null;
 }) {
   const updateRow = (key: string, patch: Partial<TierRow>) => {
     onChange(rows.map((r) => (r.key === key ? { ...r, ...patch } : r)));
@@ -42,7 +69,8 @@ export default function TierRowsEditor({
   return (
     <BlockStack gap="300">
       {rows.map((row, index) => (
-        <InlineStack key={row.key} gap="200" blockAlign="end" wrap={false}>
+        <BlockStack key={row.key} gap="100">
+        <InlineStack gap="200" blockAlign="end" wrap={false}>
           <div style={{ width: 90 }}>
             <TextField
               label={index === 0 ? "Buy quantity" : undefined}
@@ -76,7 +104,11 @@ export default function TierRowsEditor({
               step={row.discountType === "PERCENTAGE" ? 1 : 0.01}
               min={0}
               max={row.discountType === "PERCENTAGE" ? 100 : undefined}
-              prefix={row.discountType === "FIXED" ? "$" : undefined}
+              prefix={
+                row.discountType === "FIXED"
+                  ? currencySymbol(currencyCode)
+                  : undefined
+              }
               suffix={row.discountType === "PERCENTAGE" ? "%" : undefined}
               autoComplete="off"
               value={row.price}
@@ -99,6 +131,12 @@ export default function TierRowsEditor({
             disabled={rows.length <= 1}
           />
         </InlineStack>
+        {tierPreview(row, unitPrice, currencyCode) && (
+          <Text as="span" tone="subdued" variant="bodySm">
+            {tierPreview(row, unitPrice, currencyCode)}
+          </Text>
+        )}
+        </BlockStack>
       ))}
       <InlineStack>
         <Button onClick={addRow}>Add tier</Button>

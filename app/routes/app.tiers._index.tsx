@@ -16,9 +16,10 @@ import { TitleBar } from "@shopify/app-bridge-react";
 import { authenticate } from "../shopify.server";
 import db from "../db.server";
 import { clearTierMetafield, syncTierMetafield } from "../models/tierDiscount.server";
+import { formatMoney } from "../utils/money";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
-  const { session } = await authenticate.admin(request);
+  const { admin, session } = await authenticate.admin(request);
 
   const tierDiscounts = await db.tierDiscount.findMany({
     where: { shop: session.shop },
@@ -26,7 +27,21 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     orderBy: { createdAt: "desc" },
   });
 
-  return { tierDiscounts };
+  let currencyCode: string | null = null;
+  try {
+    const response = await admin.graphql(
+      `#graphql
+        query ShopCurrency {
+          shop { currencyCode }
+        }`,
+    );
+    const json = await response.json();
+    currencyCode = json?.data?.shop?.currencyCode ?? null;
+  } catch {
+    currencyCode = null;
+  }
+
+  return { tierDiscounts, currencyCode };
 };
 
 export const action = async ({ request }: ActionFunctionArgs) => {
@@ -79,7 +94,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
 };
 
 export default function TierDiscountsIndex() {
-  const { tierDiscounts } = useLoaderData<typeof loader>();
+  const { tierDiscounts, currencyCode } = useLoaderData<typeof loader>();
   const navigate = useNavigate();
   const fetcher = useFetcher<typeof action>();
   const [query, setQuery] = useState("");
@@ -183,7 +198,11 @@ export default function TierDiscountsIndex() {
                   </IndexTable.Cell>
                   <IndexTable.Cell>
                     {td.tiers
-                      .map((t) => `Buy ${t.quantity} for $${t.price.toFixed(2)}`)
+                      .map((t) =>
+                        t.discountType === "PERCENTAGE"
+                          ? `Buy ${t.quantity}, save ${t.price}%`
+                          : `Buy ${t.quantity} for ${formatMoney(t.price, currencyCode)}`,
+                      )
                       .join(" · ")}
                   </IndexTable.Cell>
                   <IndexTable.Cell>

@@ -35,9 +35,31 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     }),
   ]);
 
+  // A previously-featured coupon can stop being active (expired, usage
+  // limit hit, deactivated) between visits. Prune it here so the
+  // storefront slider never shows a dead code, best-effort.
+  const activeCodes = new Set(discounts.map((d) => d.code));
+  const stillValid = selected.filter((s) => activeCodes.has(s.code));
+  if (stillValid.length !== selected.length) {
+    try {
+      await db.selectedCoupon.deleteMany({
+        where: {
+          shop: session.shop,
+          code: { notIn: stillValid.map((s) => s.code) },
+        },
+      });
+      await syncCouponCodesMetafield(
+        admin,
+        discounts.filter((d) => stillValid.some((s) => s.code === d.code)),
+      );
+    } catch {
+      // ignore — worst case the next save reconciles it
+    }
+  }
+
   return {
     discounts,
-    selectedCodes: selected.map((s) => s.code),
+    selectedCodes: stillValid.map((s) => s.code),
   };
 };
 
@@ -145,6 +167,8 @@ export default function CouponsIndex() {
                   { title: "Title" },
                   { title: "Code" },
                   { title: "Summary" },
+                  { title: "Expires" },
+                  { title: "Usage limit" },
                 ]}
               >
                 {rows.map((d, index) => (
@@ -167,6 +191,18 @@ export default function CouponsIndex() {
                     <IndexTable.Cell>
                       <Text as="span" tone="subdued" variant="bodySm">
                         {d.summary || "—"}
+                      </Text>
+                    </IndexTable.Cell>
+                    <IndexTable.Cell>
+                      <Text as="span" tone="subdued" variant="bodySm">
+                        {d.endsAt
+                          ? new Date(d.endsAt).toLocaleDateString()
+                          : "No end date"}
+                      </Text>
+                    </IndexTable.Cell>
+                    <IndexTable.Cell>
+                      <Text as="span" tone="subdued" variant="bodySm">
+                        {d.usageLimit ?? "Unlimited"}
                       </Text>
                     </IndexTable.Cell>
                   </IndexTable.Row>

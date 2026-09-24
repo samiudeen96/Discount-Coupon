@@ -8,6 +8,37 @@ export type TierInput = {
   label: string | null;
 };
 
+/**
+ * Returns an error message if the tiers aren't safe to save, or null if
+ * they're valid. Catches the two ways a merchant can accidentally create a
+ * tier that silently never applies: a duplicate/descending buy quantity
+ * (the checkout Function always picks the single highest matching tier, so
+ * a lower or equal quantity added after a higher one can never be reached)
+ * and an out-of-range percentage.
+ */
+export function validateTiers(tiers: TierInput[]): string | null {
+  if (tiers.length === 0) return "Add at least one tier.";
+
+  for (let i = 0; i < tiers.length; i++) {
+    const t = tiers[i];
+    if (!Number.isFinite(t.quantity) || t.quantity < 1) {
+      return "Buy quantity must be at least 1.";
+    }
+    if (i > 0 && t.quantity <= tiers[i - 1].quantity) {
+      return "Tiers must have strictly increasing buy quantities, lowest to highest.";
+    }
+    if (t.discountType === "PERCENTAGE") {
+      if (!(t.price > 0 && t.price <= 100)) {
+        return "Percentage tiers must be greater than 0 and at most 100.";
+      }
+    } else if (!(t.price > 0)) {
+      return "Bundle price must be greater than 0.";
+    }
+  }
+
+  return null;
+}
+
 // Stored on the product as a "gw_tier_discount.tiers" metafield so both the
 // theme widget (Liquid) and the Shopify Function can read it directly from
 // product.metafields.gw_tier_discount.tiers.
@@ -128,6 +159,8 @@ export type CouponCode = {
   code: string;
   title: string;
   summary: string | null;
+  endsAt: string | null;
+  usageLimit: number | null;
 };
 
 /**
@@ -148,16 +181,22 @@ export async function fetchActiveDiscountCodes(
               ... on DiscountCodeBasic {
                 title
                 summary
+                endsAt
+                usageLimit
                 codes(first: 1) { nodes { code } }
               }
               ... on DiscountCodeBxgy {
                 title
                 summary
+                endsAt
+                usageLimit
                 codes(first: 1) { nodes { code } }
               }
               ... on DiscountCodeFreeShipping {
                 title
                 summary
+                endsAt
+                usageLimit
                 codes(first: 1) { nodes { code } }
               }
             }
@@ -171,6 +210,8 @@ export async function fetchActiveDiscountCodes(
     codeDiscount?: {
       title?: string;
       summary?: string | null;
+      endsAt?: string | null;
+      usageLimit?: number | null;
       codes?: { nodes?: { code: string }[] };
     };
   };
@@ -184,6 +225,8 @@ export async function fetchActiveDiscountCodes(
         code,
         title: n.codeDiscount?.title ?? code,
         summary: n.codeDiscount?.summary ?? null,
+        endsAt: n.codeDiscount?.endsAt ?? null,
+        usageLimit: n.codeDiscount?.usageLimit ?? null,
       };
     })
     .filter((c): c is CouponCode => c !== null);
