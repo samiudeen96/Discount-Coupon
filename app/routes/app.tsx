@@ -26,7 +26,6 @@ export default function App() {
         </Link>
         <Link to="/app/tiers">Tier Discounts</Link>
         <Link to="/app/coupons">Coupons</Link>
-        <Link to="/app/additional">Additional page</Link>
       </NavMenu>
       <Outlet />
     </AppProvider>

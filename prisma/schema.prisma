@@ -65,7 +65,9 @@ model Tier {
   id             String       @id @default(cuid())
   tierDiscountId String
   tierDiscount   TierDiscount @relation(fields: [tierDiscountId], references: [id], onDelete: Cascade)
-  quantity       Int
+  quantity       Int // range start ("from")
+  hasMax         Boolean      @default(false) // whether the merchant opted into an upper limit at all
+  maxQuantity    Int? // range end ("to"); null = unbounded. Distinct from hasMax=false: hasMax=true with this null means "checked but left blank" (shown as "from+"), while hasMax=false means "no upper-limit concept" (shown as bare "from")
   discountType   String       @default("FIXED") // "FIXED" (bundle price) | "PERCENTAGE" (percent off)
   price          Float
   label          String?

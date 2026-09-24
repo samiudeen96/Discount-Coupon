@@ -9,6 +9,7 @@ query CartLinesDiscountsGenerateRun {
       cost {
         amountPerQuantity {
           amount
+          currencyCode
         }
       }
       merchandise {

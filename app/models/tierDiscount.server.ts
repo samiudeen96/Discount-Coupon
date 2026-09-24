@@ -2,7 +2,9 @@
 type AdminGraphqlClient = { graphql: (query: string, options?: any) => Promise<Response> };
 
 export type TierInput = {
-  quantity: number;
+  quantity: number; // range start ("from")
+  hasMax: boolean; // whether the merchant opted into an upper limit at all
+  maxQuantity: number | null; // range end ("to"); null = unbounded. With hasMax=true this means "checked but left blank" (shown as "from+"); with hasMax=false it means "no upper-limit concept" (shown as bare "from")
   discountType: "FIXED" | "PERCENTAGE";
   price: number;
   label: string | null;
@@ -10,11 +12,12 @@ export type TierInput = {
 
 /**
  * Returns an error message if the tiers aren't safe to save, or null if
- * they're valid. Catches the two ways a merchant can accidentally create a
- * tier that silently never applies: a duplicate/descending buy quantity
- * (the checkout Function always picks the single highest matching tier, so
- * a lower or equal quantity added after a higher one can never be reached)
- * and an out-of-range percentage.
+ * they're valid. Each tier is a quantity range [quantity, maxQuantity] (or
+ * [quantity, +Infinity) when maxQuantity is left blank/unbounded). "To" is
+ * optional on every tier, not just the last: the checkout Function always
+ * picks the most specific (highest "from") range that matches the cart
+ * quantity, so an earlier open-ended tier is still correctly overridden by
+ * a later, more specific one when the quantity falls in both.
  */
 export function validateTiers(tiers: TierInput[]): string | null {
   if (tiers.length === 0) return "Add at least one tier.";
@@ -24,8 +27,14 @@ export function validateTiers(tiers: TierInput[]): string | null {
     if (!Number.isFinite(t.quantity) || t.quantity < 1) {
       return "Buy quantity must be at least 1.";
     }
+    if (
+      t.maxQuantity !== null &&
+      (!Number.isFinite(t.maxQuantity) || t.maxQuantity < t.quantity)
+    ) {
+      return "A tier's \"to\" quantity must be greater than or equal to its \"from\" quantity.";
+    }
     if (i > 0 && t.quantity <= tiers[i - 1].quantity) {
-      return "Tiers must have strictly increasing buy quantities, lowest to highest.";
+      return "Tiers must have strictly increasing \"from\" quantities, lowest to highest.";
     }
     if (t.discountType === "PERCENTAGE") {
       if (!(t.price > 0 && t.price <= 100)) {

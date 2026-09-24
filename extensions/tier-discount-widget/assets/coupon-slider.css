@@ -1,6 +1,6 @@
 .gw-coupon-slider {
   display: block;
-  max-width: 480px;
+  width: 100%;
 }
 
 .gw-coupon-slider__heading {

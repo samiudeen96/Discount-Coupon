@@ -96,6 +96,8 @@ export const action = async ({ request, params }: ActionFunctionArgs) => {
         tierDiscount.productGid,
         tierDiscount.tiers.map((t) => ({
           quantity: t.quantity,
+          hasMax: t.hasMax,
+          maxQuantity: t.maxQuantity,
           discountType: t.discountType as "FIXED" | "PERCENTAGE",
           price: t.price,
           label: t.label,
@@ -128,6 +130,8 @@ export const action = async ({ request, params }: ActionFunctionArgs) => {
             deleteMany: {},
             create: tierDiscount.tiers.map((t, i) => ({
               quantity: t.quantity,
+              hasMax: t.hasMax,
+              maxQuantity: t.maxQuantity,
               discountType: t.discountType,
               price: t.price,
               label: t.label,
@@ -143,6 +147,8 @@ export const action = async ({ request, params }: ActionFunctionArgs) => {
           tiers: {
             create: tierDiscount.tiers.map((t, i) => ({
               quantity: t.quantity,
+              hasMax: t.hasMax,
+              maxQuantity: t.maxQuantity,
               discountType: t.discountType,
               price: t.price,
               label: t.label,
@@ -157,6 +163,8 @@ export const action = async ({ request, params }: ActionFunctionArgs) => {
         target.id,
         tierDiscount.tiers.map((t) => ({
           quantity: t.quantity,
+          hasMax: t.hasMax,
+          maxQuantity: t.maxQuantity,
           discountType: t.discountType as "FIXED" | "PERCENTAGE",
           price: t.price,
           label: t.label,
@@ -173,6 +181,8 @@ export const action = async ({ request, params }: ActionFunctionArgs) => {
 
   const tiers = JSON.parse(String(formData.get("tiers") || "[]")) as {
     quantity: number;
+    hasMax: boolean;
+    maxQuantity: number | null;
     discountType: "FIXED" | "PERCENTAGE";
     price: number;
     label: string | null;
@@ -190,6 +200,8 @@ export const action = async ({ request, params }: ActionFunctionArgs) => {
       tiers: {
         create: tiers.map((t, i) => ({
           quantity: t.quantity,
+          hasMax: t.hasMax,
+          maxQuantity: t.maxQuantity,
           discountType: t.discountType,
           price: t.price,
           label: t.label,
@@ -215,6 +227,8 @@ export default function EditTierDiscount() {
     tierDiscount.tiers.map((t) => ({
       key: t.id,
       quantity: String(t.quantity),
+      hasMax: t.hasMax,
+      maxQuantity: t.maxQuantity === null ? "" : String(t.maxQuantity),
       discountType: t.discountType as "FIXED" | "PERCENTAGE",
       price: String(t.price),
       label: t.label || "",
@@ -226,6 +240,8 @@ export default function EditTierDiscount() {
   const handleSave = () => {
     const tiers = rows.map((r) => ({
       quantity: Number(r.quantity),
+      hasMax: r.hasMax,
+      maxQuantity: r.hasMax && r.maxQuantity ? Number(r.maxQuantity) : null,
       discountType: r.discountType,
       price: Number(r.price),
       label: r.label || null,

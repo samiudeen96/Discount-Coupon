@@ -39,38 +39,61 @@
           if tier.discountType == "PERCENTAGE"
             assign is_percentage = true
           endif
-          assign compare_total_cents = unit_price | times: qty
-          assign compare_total = compare_total_cents | divided_by: 100.0
 
           if is_percentage
-            assign bundle_price_cents = compare_total_cents | times: tier.price | divided_by: 100
+            assign remaining_percent = 100 | minus: tier.price
+            assign tier_unit_price_cents = unit_price | times: remaining_percent | divided_by: 100
           else
-            assign bundle_price = tier.price
-            assign bundle_price_cents = bundle_price | times: 100 | round
+            assign tier_unit_price_cents = tier.price | times: 100 | round
           endif
 
+          if tier.maxQuantity
+            assign range_label = qty | append: '-' | append: tier.maxQuantity
+          elsif tier.hasMax
+            assign range_label = qty | append: '+'
+          else
+            assign range_label = qty
+          endif
+
+          assign savings_percent = 0
+          if unit_price > 0 and unit_price > tier_unit_price_cents
+            assign savings_percent = unit_price | minus: tier_unit_price_cents | times: 100 | divided_by: unit_price
+          endif
         %}
         <label class="gw-tier-picker__option">
           <input
             type="radio"
             name="gw-tier-{{ block.id }}"
             value="{{ qty }}"
-            data-price="{{ bundle_price_cents }}"
+            data-price="{{ tier_unit_price_cents }}"
+            {% if tier.maxQuantity %}data-max="{{ tier.maxQuantity }}"{% endif %}
           >
-          <span class="gw-tier-picker__radio" aria-hidden="true"></span>
-          <span class="gw-tier-picker__label">
+          <span class="gw-tier-picker__check" aria-hidden="true">
+            <svg viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M3 8.5L6.2 11.5L13 4.5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </span>
+
+          <span class="gw-tier-picker__main">
+            <span class="gw-tier-picker__top-row">
+              <span class="gw-tier-picker__range">
+                <span class="gw-tier-picker__qty">{{ range_label }}</span>
+                <span class="gw-tier-picker__qty-unit">units</span>
+              </span>
+              {% if savings_percent > 0 %}
+                <span class="gw-tier-picker__badge">Save {{ savings_percent }}%</span>
+              {% endif %}
+            </span>
             {% if tier.label != blank %}
               <span class="gw-tier-picker__tag">{{ tier.label }}</span>
             {% endif %}
-            {% if is_percentage %}
-              Buy {{ qty }} and save {{ tier.price }}%
-              <strong>{{ bundle_price_cents | money }}</strong>
-            {% else %}
-              Buy {{ qty }} for
-              <strong>{{ bundle_price_cents | money }}</strong>
-            {% endif %}
-            {% if compare_total_cents > bundle_price_cents %}
-              <s class="gw-tier-picker__compare">{{ compare_total_cents | money }}</s>
+          </span>
+
+          <span class="gw-tier-picker__price-col">
+            <strong class="gw-tier-picker__price">{{ tier_unit_price_cents | money }}</strong>
+            <span class="gw-tier-picker__per-unit">/ unit</span>
+            {% if unit_price > tier_unit_price_cents %}
+              <s class="gw-tier-picker__compare">{{ unit_price | money }}</s>
             {% endif %}
           </span>
         </label>

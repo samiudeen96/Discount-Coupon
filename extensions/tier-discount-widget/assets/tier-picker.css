@@ -1,6 +1,6 @@
 .gw-tier-picker {
   display: block;
-  max-width: 480px;
+  width: 100%;
 }
 
 .gw-tier-picker__list {
@@ -17,31 +17,60 @@
 
 .gw-tier-picker__list--grid .gw-tier-picker__option {
   flex-direction: column;
-  align-items: flex-start;
-  gap: 8px;
+  align-items: stretch;
 }
 
-.gw-tier-picker__list--grid .gw-tier-picker__label {
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 4px;
+.gw-tier-picker__list--grid .gw-tier-picker__price-col {
+  align-self: flex-start;
+  margin-top: 10px;
 }
 
 @media (max-width: 480px) {
   .gw-tier-picker__list--grid {
     grid-template-columns: 1fr;
   }
+
+  /* At phone width, a stack-mode card (not grid, which already stacks its
+     content vertically) drops to a wrapped layout: checkmark + range/badge
+     on top, price below — a single horizontal row of checkmark + range +
+     badge + price never fits comfortably at this width. */
+  .gw-tier-picker__list:not(.gw-tier-picker__list--grid) .gw-tier-picker__option {
+    flex-wrap: wrap;
+    padding: 14px;
+    gap: 10px;
+  }
+
+  .gw-tier-picker__list:not(.gw-tier-picker__list--grid) .gw-tier-picker__main {
+    flex-basis: calc(100% - 32px);
+  }
+
+  .gw-tier-picker__list:not(.gw-tier-picker__list--grid) .gw-tier-picker__price-col {
+    flex-basis: 100%;
+    margin-left: 32px;
+    justify-content: flex-start;
+  }
+
+  .gw-tier-picker__top-row {
+    gap: 8px;
+  }
+
+  .gw-tier-picker__badge {
+    font-size: 10px;
+    padding: 3px 8px;
+  }
 }
 
 .gw-tier-picker__option {
+  position: relative;
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 14px 16px;
-  border: 1px solid #e1e1e1;
-  border-radius: 10px;
+  gap: 14px;
+  padding: 16px;
+  border: 1px solid #e3e3e3;
+  border-radius: 14px;
   cursor: pointer;
-  transition: border-color 0.15s ease, background-color 0.15s ease;
+  transition: border-color 0.15s ease, background-color 0.15s ease,
+    box-shadow 0.15s ease;
   background: #fff;
 }
 
@@ -51,9 +80,8 @@
 
 .gw-tier-picker__option.is-selected {
   border-color: var(--gw-accent);
-  border-width: 2px;
-  padding: 13px 15px;
   background: var(--gw-accent-bg);
+  box-shadow: 0 0 0 1px var(--gw-accent);
 }
 
 .gw-tier-picker__option input[type="radio"] {
@@ -63,53 +91,108 @@
   height: 0;
 }
 
-.gw-tier-picker__radio {
+.gw-tier-picker__check {
   flex: 0 0 auto;
-  width: 20px;
-  height: 20px;
+  width: 22px;
+  height: 22px;
   border-radius: 50%;
-  border: 2px solid #c4c4c4;
-  position: relative;
-}
-
-.gw-tier-picker__option.is-selected .gw-tier-picker__radio {
-  border-color: var(--gw-accent);
-}
-
-.gw-tier-picker__option.is-selected .gw-tier-picker__radio::after {
-  content: "";
-  position: absolute;
-  inset: 3px;
-  border-radius: 50%;
-  background: var(--gw-accent);
-}
-
-.gw-tier-picker__label {
-  font-size: 15px;
-  color: #1a1a1a;
+  border: 2px solid #cfcfcf;
   display: flex;
-  align-items: baseline;
-  gap: 6px;
+  align-items: center;
+  justify-content: center;
+  color: transparent;
+  transition: border-color 0.15s ease, background-color 0.15s ease;
+}
+
+.gw-tier-picker__check svg {
+  width: 12px;
+  height: 12px;
+}
+
+.gw-tier-picker__option.is-selected .gw-tier-picker__check {
+  border-color: var(--gw-accent);
+  background: var(--gw-accent);
+  color: #fff;
+}
+
+.gw-tier-picker__main {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+  min-width: 0;
+}
+
+.gw-tier-picker__top-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
   flex-wrap: wrap;
 }
 
-.gw-tier-picker__label strong {
-  font-size: 16px;
+.gw-tier-picker__range {
+  display: flex;
+  align-items: baseline;
+  gap: 5px;
 }
 
-.gw-tier-picker__compare {
-  color: #8a8a8a;
-  font-size: 13px;
+.gw-tier-picker__qty {
+  font-size: 16px;
+  font-weight: 700;
+  color: #1a1a1a;
+}
+
+.gw-tier-picker__qty-unit {
+  font-size: 12px;
+  color: #6a6a6a;
 }
 
 .gw-tier-picker__tag {
-  order: -1;
-  flex-basis: 100%;
   font-size: 11px;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.04em;
   color: var(--gw-accent);
+}
+
+.gw-tier-picker__badge {
+  flex: 0 0 auto;
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: var(--gw-accent);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+
+.gw-tier-picker__price-col {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  text-align: right;
+}
+
+.gw-tier-picker__price {
+  font-size: 17px;
+  font-weight: 700;
+  color: #1a1a1a;
+  white-space: nowrap;
+}
+
+.gw-tier-picker__per-unit {
+  font-size: 12px;
+  color: #6a6a6a;
+  white-space: nowrap;
+}
+
+.gw-tier-picker__compare {
+  color: #a3a3a3;
+  font-size: 12px;
+  white-space: nowrap;
 }
 
 .gw-tier-picker__clear {
@@ -123,4 +206,3 @@
   text-decoration: underline;
   cursor: pointer;
 }
-

@@ -78,6 +78,8 @@ export const action = async ({ request }: ActionFunctionArgs) => {
           td.productGid,
           td.tiers.map((t) => ({
             quantity: t.quantity,
+            hasMax: t.hasMax,
+            maxQuantity: t.maxQuantity,
             discountType: t.discountType as "FIXED" | "PERCENTAGE",
             price: t.price,
             label: t.label,
@@ -198,11 +200,19 @@ export default function TierDiscountsIndex() {
                   </IndexTable.Cell>
                   <IndexTable.Cell>
                     {td.tiers
-                      .map((t) =>
-                        t.discountType === "PERCENTAGE"
-                          ? `Buy ${t.quantity}, save ${t.price}%`
-                          : `Buy ${t.quantity} for ${formatMoney(t.price, currencyCode)}`,
-                      )
+                      .map((t) => {
+                        let range;
+                        if (t.maxQuantity !== null) {
+                          range = `${t.quantity}–${t.maxQuantity}`;
+                        } else if (t.hasMax) {
+                          range = `${t.quantity}+`;
+                        } else {
+                          range = `${t.quantity}`;
+                        }
+                        return t.discountType === "PERCENTAGE"
+                          ? `${range}: save ${t.price}%`
+                          : `${range}: ${formatMoney(t.price, currencyCode)}/unit`;
+                      })
                       .join(" · ")}
                   </IndexTable.Cell>
                   <IndexTable.Cell>
